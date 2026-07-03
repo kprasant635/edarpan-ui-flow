@@ -13,10 +13,18 @@ User asked to add the repo `https://github.com/kprasant635/edarpan-ui-flow.git` 
 - Data lives in `/app/frontend/src/flowData.js`
 - View logic in `/app/frontend/src/App.js`
 
-## What's been implemented — Jan 2026 (post-fix, iteration 2)
+## What's been implemented — Jan 2026 (post-fix, iteration 3)
 - Cloned & wired the `edarpan-ui-flow` repo into `/app`, added missing `reactflow` and `dagre` deps.
-- Three tabs: **Complete Workflow**, **Citizen Portal**, **Officer Portal** — each backed by data in `flowData.js`.
-- **Interactive diagram** with drag/resize/pan/zoom, minimap, controls.
+- **Four tabs**: Complete Workflow · Citizen Portal · Officer Portal · **Edarpan UI flow** (new, iter 3).
+- **Edarpan UI flow tab (iter 3)** — derived from user-uploaded `e-darpan-ux-flow-diagram-edited.html`:
+  - 5 role lanes (Citizen, ASST, LRS, LRA, CO) with 32 nodes.
+  - AI-chatbot layer as purple dashed edges per role.
+  - Officer → Citizen query loops as orange dashed edges; Citizen replies as green dashed edges.
+  - CO SLA-breach → LRA reassignment as red dashed edges.
+  - Purpose-based routing decision diamond → CO shortcut or LRS+LRA path.
+  - 30 new screen detail entries in `edarpanUiFlow.js`.
+- Three tabs kept from earlier iterations: Complete Workflow · Citizen Portal · Officer Portal.
+- **Interactive diagram** with drag / pan / zoom / minimap / controls.
 - **Editable nodes**: double-click to rename, drag between red handle-dots to create edges, select + Delete to remove.
 - **Auto-Layout**: dagre-powered — `Auto ⇥` (left→right) and `Auto ⇩` (top→bottom). Fixes overlapping edges.
 - **Node resizer (iter 2)**: every node has 8 corner/side handles when selected — drag to resize. Pill / Box / Diamond nodes all support it.

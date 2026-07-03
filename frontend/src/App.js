@@ -27,6 +27,9 @@ import {
   screenDetails,
   NODE_COLORS,
 } from '@/flowData';
+import { edarpanUiFlow, edarpanUiScreenDetails } from '@/edarpanUiFlow';
+
+const ALL_SCREEN_DETAILS = { ...screenDetails, ...edarpanUiScreenDetails };
 
 /* ---------------- Edge color palette ---------------- */
 const EDGE_COLORS = {
@@ -278,9 +281,10 @@ function toReactFlowEdges(rawEdges) {
 /* ---------------- App Constants ---------------- */
 
 const TABS = [
-  { id: 'workflow', label: 'Complete Workflow', flow: workflowFlow },
-  { id: 'citizen',  label: 'Citizen Portal',    flow: citizenFlow },
-  { id: 'officer',  label: 'Officer Portal',    flow: officerFlow },
+  { id: 'workflow',   label: 'Complete Workflow', flow: workflowFlow },
+  { id: 'citizen',    label: 'Citizen Portal',    flow: citizenFlow },
+  { id: 'officer',    label: 'Officer Portal',    flow: officerFlow },
+  { id: 'edarpan-ui', label: 'Edarpan UI flow',   flow: edarpanUiFlow },
 ];
 
 const LEGEND = [
@@ -358,8 +362,8 @@ function Canvas({ tab, flow, onSelect }) {
 
   const onNodeClick = useCallback((_evt, node) => {
     const screenKey = node.data?.screen;
-    if (screenKey && screenDetails[screenKey]) {
-      onSelect({ key: screenKey, ...screenDetails[screenKey] });
+    if (screenKey && ALL_SCREEN_DETAILS[screenKey]) {
+      onSelect({ key: screenKey, ...ALL_SCREEN_DETAILS[screenKey] });
     } else {
       onSelect(null);
     }
