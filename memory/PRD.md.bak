@@ -1,0 +1,34 @@
+# e-Darpan UX Flow Diagram — PRD
+
+## Problem Statement
+User uploaded 2 HTML files (`e-darpan-citizen-portal.html`, `e-darpan-officer-portal.html`) and asked to generate a UX flow diagram in the visual style of a reference image (colored rectangular nodes, diamond decision, START/END pills, dashed return loops).
+
+## What's been implemented — Jan 2026
+- Analyzed both HTML files (screens, transitions, roles, actions) using file-analysis tool.
+- Built an interactive React Flow diagram app at the preview URL.
+- Three tabs:
+  1. **Complete Workflow** — end-to-end e-Darpan flow (mirrors the user's reference image: Step 1 → Step 9 + Rejected branch + all Return loops).
+  2. **Citizen Portal** — screen-flow for `e-darpan-citizen-portal.html` (login/OTP/dashboard/new-application/track/download/query response).
+  3. **Officer Portal** — screen-flow for `e-darpan-officer-portal.html` (ASST · SK · LRA · CO lanes with all transitions).
+- Visual language matches the reference: red START pill, dark END pill, blue steps, yellow scrutiny, green officer actions, purple decision diamond, pink rejected, dashed grey "return to citizen" edges.
+- Legend + click-to-inspect side panel showing each screen's role, purpose and key actions.
+- Minimap, pan/zoom, fit-to-view controls.
+- Cream/navy editorial theme, Fraunces + IBM Plex Sans fonts (deliberately non-generic).
+
+## Core requirements (static)
+- Read HTML → derive screens & transitions.
+- Render as interactive flow diagram in reference visual style.
+- Show details per screen on click.
+
+## Tech
+- React 19 + React Flow 11 (`reactflow`).
+- Tailwind + inline styles for the editorial look.
+- Data lives in `/app/frontend/src/flowData.js`.
+- View logic in `/app/frontend/src/App.js`.
+
+## Backlog / Next
+- **P1** Export current diagram as PNG / SVG / Mermaid.
+- **P1** Upload-your-own-HTML mode (backend endpoint that parses HTML → flow JSON via LLM, then renders).
+- **P2** Auto-layout using dagre / elk instead of hand-positioned nodes.
+- **P2** Deep-linkable node URLs (`?screen=citizen-otp`).
+- **P2** Print / A3 poster layout.

@@ -12,6 +12,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import dagre from 'dagre';
 import '@/App.css';
 import {
   workflowFlow,
@@ -21,11 +22,42 @@ import {
   NODE_COLORS,
 } from '@/flowData';
 
+/* ---------------- Auto-layout with dagre ---------------- */
+const NODE_W = 200;
+const NODE_H = 90;
+
+function autoLayout(nodes, edges, direction = 'LR') {
+  const g = new dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: direction, nodesep: 60, ranksep: 90, marginx: 40, marginy: 40 });
+
+  nodes.forEach((n) => {
+    const w = n.type === 'diamond' ? 180 : NODE_W;
+    const h = n.type === 'diamond' ? 180 : NODE_H;
+    g.setNode(n.id, { width: w, height: h });
+  });
+  // Only use forward (non-dashed) edges for layout ranking
+  edges.forEach((e) => {
+    if (!e.data?.dashed) g.setEdge(e.source, e.target);
+  });
+
+  dagre.layout(g);
+
+  return nodes.map((n) => {
+    const pos = g.node(n.id);
+    return {
+      ...n,
+      position: { x: pos.x - (pos.width / 2), y: pos.y - (pos.height / 2) },
+    };
+  });
+}
+
 /* ---------------- Custom Node Renderers ---------------- */
 
 const HANDLE_STYLE = {
-  width: 10, height: 10, background: '#0B1B2B', border: '2px solid #fff',
-  boxShadow: '0 0 0 1px #0B1B2B',
+  width: 12, height: 12, background: '#E63946', border: '2px solid #fff',
+  boxShadow: '0 0 0 1.5px #0B1B2B',
+  zIndex: 5,
 };
 
 const PillNode = ({ data, selected }) => {
@@ -110,24 +142,34 @@ function toReactFlowNodes(rawNodes) {
 }
 
 function styleEdge(e, i) {
+  const dashed = !!e.dashed;
   return {
-    id: e.id || `${e.source}->${e.target}-${i}`,
+    id: e.id || `${e.source}->${e.target}-${i}-${Math.random().toString(36).slice(2, 6)}`,
     source: e.source,
     target: e.target,
     label: e.label,
     type: e.type || 'smoothstep',
-    animated: !!e.dashed,
-    data: { dashed: !!e.dashed },
+    animated: dashed,
+    data: { dashed },
     style: {
-      stroke: e.dashed ? '#94a3b8' : '#4b5563',
-      strokeWidth: e.dashed ? 1.6 : 2,
-      strokeDasharray: e.dashed ? '6 4' : undefined,
+      stroke: dashed ? '#E63946' : '#4b5563',
+      strokeWidth: dashed ? 2 : 2,
+      strokeDasharray: dashed ? '8 5' : undefined,
+      opacity: dashed ? 0.85 : 1,
     },
-    labelStyle: { fill: '#0f172a', fontWeight: 600, fontSize: 11 },
+    labelStyle: {
+      fill: dashed ? '#7f1d1d' : '#0f172a',
+      fontWeight: 700,
+      fontSize: 11,
+    },
     labelBgPadding: [6, 4],
-    labelBgBorderRadius: 4,
-    labelBgStyle: { fill: '#ffffff', fillOpacity: 0.95, stroke: '#e5e7eb' },
-    markerEnd: { type: MarkerType.ArrowClosed, color: e.dashed ? '#94a3b8' : '#4b5563' },
+    labelBgBorderRadius: 6,
+    labelBgStyle: {
+      fill: dashed ? '#FEE2E2' : '#ffffff',
+      fillOpacity: 0.98,
+      stroke: dashed ? '#E63946' : '#e5e7eb',
+    },
+    markerEnd: { type: MarkerType.ArrowClosed, color: dashed ? '#E63946' : '#4b5563', width: 18, height: 18 },
   };
 }
 
@@ -299,6 +341,46 @@ function Canvas({ tab, flow, onSelect }) {
     setNodes((nds) => nds.map((n) => (n.selected ? { ...n, type: typeForKind(kind), data: { ...n.data, kind } } : n)));
   }, []);
 
+  /* Auto-layout using dagre */
+  const runAutoLayout = useCallback((direction) => {
+    setNodes((nds) => {
+      const laid = autoLayout(nds, edges, direction);
+      return laid;
+    });
+    // Refit after DOM paint
+    setTimeout(() => rf.fitView?.({ padding: 0.15, duration: 400 }), 60);
+  }, [edges, rf]);
+
+  /* Edge actions on selected edges */
+  const toggleDashedOnSelected = useCallback(() => {
+    setEdges((eds) => eds.map((e) => {
+      if (!e.selected) return e;
+      const dashed = !e.data?.dashed;
+      return {
+        ...e,
+        animated: dashed,
+        data: { ...(e.data || {}), dashed },
+        style: {
+          ...(e.style || {}),
+          stroke: dashed ? '#E63946' : '#4b5563',
+          strokeDasharray: dashed ? '8 5' : undefined,
+          opacity: dashed ? 0.85 : 1,
+        },
+        labelStyle: { fill: dashed ? '#7f1d1d' : '#0f172a', fontWeight: 700, fontSize: 11 },
+        labelBgStyle: {
+          fill: dashed ? '#FEE2E2' : '#ffffff',
+          fillOpacity: 0.98,
+          stroke: dashed ? '#E63946' : '#e5e7eb',
+        },
+        markerEnd: { type: MarkerType.ArrowClosed, color: dashed ? '#E63946' : '#4b5563', width: 18, height: 18 },
+      };
+    }));
+  }, []);
+
+  const reverseSelectedEdge = useCallback(() => {
+    setEdges((eds) => eds.map((e) => (e.selected ? { ...e, source: e.target, target: e.source, sourceHandle: e.targetHandle, targetHandle: e.sourceHandle } : e)));
+  }, []);
+
   return (
     <div ref={wrapperRef} style={{ position: 'relative', width: '100%', height: '100%', background: '#FFFFFF' }}>
       {/* Floating toolbar */}
@@ -346,6 +428,54 @@ function Canvas({ tab, flow, onSelect }) {
           style={{ padding: '5px 10px', borderRadius: 8, background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}
         >
           Delete
+        </button>
+        <Divider />
+        <ToolbarLabel>Edge:</ToolbarLabel>
+        <button
+          data-testid="toggle-dashed"
+          onClick={toggleDashedOnSelected}
+          title="Toggle dashed / return style on the selected edge"
+          className="text-xs font-semibold"
+          style={{
+            padding: '5px 10px', borderRadius: 8,
+            background: '#FEE2E2', color: '#7f1d1d',
+            border: '1.5px dashed #E63946',
+          }}
+        >
+          ⇢ Toggle dashed
+        </button>
+        <button
+          data-testid="reverse-edge"
+          onClick={reverseSelectedEdge}
+          title="Reverse direction of the selected edge"
+          className="text-xs font-semibold"
+          style={{
+            padding: '5px 10px', borderRadius: 8,
+            background: '#F5F1EA', color: '#0B1B2B',
+            border: '1px solid #0B1B2B',
+          }}
+        >
+          ⇄ Reverse
+        </button>
+        <Divider />
+        <ToolbarLabel>Layout:</ToolbarLabel>
+        <button
+          data-testid="auto-layout-lr"
+          onClick={() => runAutoLayout('LR')}
+          title="Auto-layout left → right"
+          className="text-xs font-semibold"
+          style={{ padding: '5px 10px', borderRadius: 8, background: '#0B1B2B', color: '#F5F1EA', border: '1px solid #0B1B2B' }}
+        >
+          Auto ⇥
+        </button>
+        <button
+          data-testid="auto-layout-tb"
+          onClick={() => runAutoLayout('TB')}
+          title="Auto-layout top → bottom"
+          className="text-xs font-semibold"
+          style={{ padding: '5px 10px', borderRadius: 8, background: '#F5F1EA', color: '#0B1B2B', border: '1px solid #0B1B2B' }}
+        >
+          Auto ⇩
         </button>
         <Divider />
         <button
@@ -407,7 +537,7 @@ function Canvas({ tab, flow, onSelect }) {
         background: 'rgba(255,255,255,0.9)', padding: '5px 10px',
         borderRadius: 999, border: '1px solid #E5E1D8',
       }}>
-        Drag to move · Double-click a node/edge to rename · Drag from a dot to connect · Del to remove
+        Drag to move · Double-click a node/edge to rename · Drag from a red dot to connect · Select an edge → use toolbar to Toggle dashed / Reverse
       </div>
 
       <ReactFlow
