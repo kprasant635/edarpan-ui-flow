@@ -123,6 +123,18 @@ export const edarpanUiFlow = {
     { from: 'ui-notif',       to: 'ui-final',        label: 'PDF + SMS',         type: 'smoothstep', dashed: true, colorKey: 'green' },
     { from: 'ui-final',       to: 'ui-end',          type: 'straight' },
     { from: 'ui-notif',       to: 'ui-end',          type: 'straight' },
+
+    // ---------------- REVERT CHAIN (higher → lower, RED dashed) ----------------
+    { from: 'ui-co-closure',  to: 'ui-lra-verify',   label: 'CO Revert Back to LRA',          type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-lra-verify',  to: 'ui-lrs-review',   label: 'LRA Revert Back to LRS',         type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-lrs-review',  to: 'ui-asst-scr',     label: 'LRS Revert Back to ASST',        type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-co-closure',  to: 'ui-asst-scr',     label: 'CO Revert Back to ASST (Direct)', type: 'smoothstep', dashed: true, colorKey: 'red' },
+
+    // ---------------- OFFICER → CITIZEN REVERT / REJECT (each role, RED dashed) ----------------
+    { from: 'ui-asst-scr',    to: 'ui-respond',      label: 'ASST Revert / Reject to Citizen', type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-lrs-review',  to: 'ui-respond',      label: 'LRS Revert / Reject to Citizen',  type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-lra-verify',  to: 'ui-respond',      label: 'LRA Revert / Reject to Citizen',  type: 'smoothstep', dashed: true, colorKey: 'red' },
+    { from: 'ui-co-review',   to: 'ui-respond',      label: 'CO Revert / Reject to Citizen',   type: 'smoothstep', dashed: true, colorKey: 'red' },
   ],
 };
 
