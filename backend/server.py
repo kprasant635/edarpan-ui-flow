@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -65,6 +66,15 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+
+@api_router.get("/downloads/officer-with-reverts.json")
+async def download_officer_with_reverts():
+    file_path = ROOT_DIR / "static" / "officer-with-reverts.json"
+    return FileResponse(
+        path=str(file_path),
+        filename="edarpan-flow-officer-with-reverts.json",
+        media_type="application/json",
+    )
 
 # Include the router in the main app
 app.include_router(api_router)
