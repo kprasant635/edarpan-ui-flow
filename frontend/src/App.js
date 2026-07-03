@@ -10,8 +10,14 @@ import ReactFlow, {
   addEdge,
   useReactFlow,
   ReactFlowProvider,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
+  getStraightPath,
+  NodeResizer,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import '@reactflow/node-resizer/dist/style.css';
 import dagre from 'dagre';
 import '@/App.css';
 import {
@@ -21,6 +27,17 @@ import {
   screenDetails,
   NODE_COLORS,
 } from '@/flowData';
+
+/* ---------------- Edge color palette ---------------- */
+const EDGE_COLORS = {
+  red:    { stroke: '#E63946', bg: '#FEE2E2', fg: '#7f1d1d' },
+  purple: { stroke: '#8B6EEA', bg: '#EDE7FD', fg: '#3B2870' },
+  blue:   { stroke: '#3E7BD1', bg: '#DBEAFE', fg: '#0B3A82' },
+  green:  { stroke: '#3EAE79', bg: '#D1FAE5', fg: '#0E5B36' },
+  orange: { stroke: '#F4A261', bg: '#FEF3C7', fg: '#78350F' },
+  gray:   { stroke: '#94a3b8', bg: '#F1F5F9', fg: '#334155' },
+};
+const DEFAULT_DASHED_COLOR = 'red';
 
 /* ---------------- Auto-layout with dagre ---------------- */
 const NODE_W = 200;
@@ -71,9 +88,11 @@ const PillNode = ({ data, selected }) => {
         borderRadius: 999, padding: '18px 30px',
         fontWeight: 800, letterSpacing: '0.12em', fontSize: 14,
         boxShadow: selected ? '0 0 0 3px rgba(11,27,43,0.15), 0 8px 20px rgba(0,0,0,0.12)' : '0 8px 20px rgba(0,0,0,0.12)',
-        textAlign: 'center', minWidth: 90,
+        textAlign: 'center', minWidth: 90, width: '100%', height: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
+      <NodeResizer isVisible={selected} minWidth={90} minHeight={50} lineStyle={{ borderColor: '#0B1B2B' }} handleStyle={{ background: '#E63946', width: 8, height: 8, borderRadius: 2 }} />
       <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />
       {data.label}
       <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />
@@ -92,10 +111,13 @@ const BoxNode = ({ data, selected }) => {
         borderRadius: 14, padding: '14px 18px',
         fontWeight: 600, fontSize: 13, lineHeight: 1.3,
         boxShadow: selected ? '0 0 0 3px rgba(11,27,43,0.15), 0 6px 14px rgba(15,23,42,0.08)' : '0 6px 14px rgba(15, 23, 42, 0.08)',
-        minWidth: 150, maxWidth: 220, textAlign: 'center',
+        minWidth: 150, width: '100%', height: '100%',
+        textAlign: 'center',
         whiteSpace: 'pre-line', cursor: 'grab',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
+      <NodeResizer isVisible={selected} minWidth={120} minHeight={60} lineStyle={{ borderColor: '#0B1B2B' }} handleStyle={{ background: '#E63946', width: 8, height: 8, borderRadius: 2 }} />
       <Handle type="target" position={Position.Top}    style={HANDLE_STYLE} id="t" />
       <Handle type="target" position={Position.Left}   style={HANDLE_STYLE} id="l" />
       {data.label}
@@ -108,7 +130,8 @@ const BoxNode = ({ data, selected }) => {
 const DiamondNode = ({ data, selected }) => {
   const c = NODE_COLORS[data.kind];
   return (
-    <div data-testid={`node-${data.id}`} style={{ width: 170, height: 170, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab' }}>
+    <div data-testid={`node-${data.id}`} style={{ width: '100%', height: '100%', minWidth: 170, minHeight: 170, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab' }}>
+      <NodeResizer isVisible={selected} minWidth={140} minHeight={140} keepAspectRatio lineStyle={{ borderColor: '#0B1B2B' }} handleStyle={{ background: '#E63946', width: 8, height: 8, borderRadius: 2 }} />
       <div style={{
         position: 'absolute', inset: 0, background: c.bg,
         border: `2px solid ${selected ? '#0B1B2B' : c.border}`,
@@ -128,6 +151,86 @@ const DiamondNode = ({ data, selected }) => {
 
 const nodeTypes = { pill: PillNode, box: BoxNode, diamond: DiamondNode };
 
+/* ---------------- Custom Edge with draggable label ---------------- */
+
+const CustomEdge = ({
+  id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
+  style = {}, label, data = {}, markerEnd,
+}) => {
+  const rf = useReactFlow();
+  const isStraight = data.type === 'straight';
+  const [edgePath, midX, midY] = isStraight
+    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+    : getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 12 });
+
+  const offset = data.labelOffset || { x: 0, y: 0 };
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
+
+  const onLabelMouseDown = useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    dragStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+    setDragging(true);
+  }, [offset.x, offset.y]);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      const zoom = rf.getZoom ? rf.getZoom() : 1;
+      rf.setEdges((eds) => eds.map((ed) => (ed.id === id
+        ? { ...ed, data: { ...(ed.data || {}), labelOffset: { x: dragStart.current.ox + dx / zoom, y: dragStart.current.oy + dy / zoom } } }
+        : ed)));
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [dragging, id, rf]);
+
+  const dashed = !!data.dashed;
+  const colorKey = data.colorKey || (dashed ? DEFAULT_DASHED_COLOR : null);
+  const palette = colorKey ? EDGE_COLORS[colorKey] : null;
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            data-testid={`edge-label-${id}`}
+            onMouseDown={onLabelMouseDown}
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${midX + offset.x}px, ${midY + offset.y}px)`,
+              pointerEvents: 'all',
+              cursor: dragging ? 'grabbing' : 'grab',
+              background: palette ? palette.bg : '#ffffff',
+              border: `1px solid ${palette ? palette.stroke : '#e5e7eb'}`,
+              padding: '3px 8px',
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: palette ? palette.fg : '#0f172a',
+              userSelect: 'none',
+              boxShadow: dragging ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+              whiteSpace: 'nowrap',
+            }}
+            className="nodrag nopan"
+            title="Drag to reposition label"
+          >
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+};
+
+const edgeTypes = { custom: CustomEdge };
+
 /* ---------------- Mapping helpers ---------------- */
 
 const typeForKind = (kind) => (kind === 'start' || kind === 'end' ? 'pill' : kind === 'decision' ? 'diamond' : 'box');
@@ -143,38 +246,33 @@ function toReactFlowNodes(rawNodes) {
 
 function styleEdge(e, i) {
   const dashed = !!e.dashed;
+  const colorKey = e.colorKey || (dashed ? DEFAULT_DASHED_COLOR : null);
+  const stroke = colorKey ? EDGE_COLORS[colorKey].stroke : '#4b5563';
   return {
     id: e.id || `${e.source}->${e.target}-${i}-${Math.random().toString(36).slice(2, 6)}`,
     source: e.source,
     target: e.target,
     label: e.label,
-    type: e.type || 'smoothstep',
+    type: 'custom',
     animated: dashed,
-    data: { dashed },
+    data: {
+      dashed,
+      colorKey,
+      type: e.type || 'smoothstep',
+      labelOffset: e.labelOffset || { x: 0, y: 0 },
+    },
     style: {
-      stroke: dashed ? '#E63946' : '#4b5563',
-      strokeWidth: dashed ? 2 : 2,
+      stroke,
+      strokeWidth: 2,
       strokeDasharray: dashed ? '8 5' : undefined,
-      opacity: dashed ? 0.85 : 1,
+      opacity: dashed ? 0.9 : 1,
     },
-    labelStyle: {
-      fill: dashed ? '#7f1d1d' : '#0f172a',
-      fontWeight: 700,
-      fontSize: 11,
-    },
-    labelBgPadding: [6, 4],
-    labelBgBorderRadius: 6,
-    labelBgStyle: {
-      fill: dashed ? '#FEE2E2' : '#ffffff',
-      fillOpacity: 0.98,
-      stroke: dashed ? '#E63946' : '#e5e7eb',
-    },
-    markerEnd: { type: MarkerType.ArrowClosed, color: dashed ? '#E63946' : '#4b5563', width: 18, height: 18 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 18, height: 18 },
   };
 }
 
 function toReactFlowEdges(rawEdges) {
-  return rawEdges.map((e, i) => styleEdge({ source: e.from, target: e.to, label: e.label, type: e.type, dashed: e.dashed }, i));
+  return rawEdges.map((e, i) => styleEdge({ source: e.from, target: e.to, label: e.label, type: e.type, dashed: e.dashed, colorKey: e.colorKey }, i));
 }
 
 /* ---------------- App Constants ---------------- */
@@ -352,33 +450,46 @@ function Canvas({ tab, flow, onSelect }) {
   }, [edges, rf]);
 
   /* Edge actions on selected edges */
+  const applyEdgeColorAndDash = useCallback((edge, dashed, colorKey) => {
+    const stroke = colorKey ? EDGE_COLORS[colorKey].stroke : '#4b5563';
+    return {
+      ...edge,
+      animated: dashed,
+      data: { ...(edge.data || {}), dashed, colorKey },
+      style: {
+        ...(edge.style || {}),
+        stroke,
+        strokeWidth: 2,
+        strokeDasharray: dashed ? '8 5' : undefined,
+        opacity: dashed ? 0.9 : 1,
+      },
+      markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 18, height: 18 },
+    };
+  }, []);
+
   const toggleDashedOnSelected = useCallback(() => {
     setEdges((eds) => eds.map((e) => {
       if (!e.selected) return e;
       const dashed = !e.data?.dashed;
-      return {
-        ...e,
-        animated: dashed,
-        data: { ...(e.data || {}), dashed },
-        style: {
-          ...(e.style || {}),
-          stroke: dashed ? '#E63946' : '#4b5563',
-          strokeDasharray: dashed ? '8 5' : undefined,
-          opacity: dashed ? 0.85 : 1,
-        },
-        labelStyle: { fill: dashed ? '#7f1d1d' : '#0f172a', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: {
-          fill: dashed ? '#FEE2E2' : '#ffffff',
-          fillOpacity: 0.98,
-          stroke: dashed ? '#E63946' : '#e5e7eb',
-        },
-        markerEnd: { type: MarkerType.ArrowClosed, color: dashed ? '#E63946' : '#4b5563', width: 18, height: 18 },
-      };
+      const colorKey = dashed ? (e.data?.colorKey || DEFAULT_DASHED_COLOR) : null;
+      return applyEdgeColorAndDash(e, dashed, colorKey);
     }));
-  }, []);
+  }, [applyEdgeColorAndDash]);
+
+  const setColorOnSelected = useCallback((colorKey) => {
+    setEdges((eds) => eds.map((e) => {
+      if (!e.selected) return e;
+      const dashed = !!e.data?.dashed || true; // enabling color implies dashed
+      return applyEdgeColorAndDash(e, dashed, colorKey);
+    }));
+  }, [applyEdgeColorAndDash]);
 
   const reverseSelectedEdge = useCallback(() => {
     setEdges((eds) => eds.map((e) => (e.selected ? { ...e, source: e.target, target: e.source, sourceHandle: e.targetHandle, targetHandle: e.sourceHandle } : e)));
+  }, []);
+
+  const resetLabelOffsetOnSelected = useCallback(() => {
+    setEdges((eds) => eds.map((e) => (e.selected ? { ...e, data: { ...(e.data || {}), labelOffset: { x: 0, y: 0 } } } : e)));
   }, []);
 
   return (
@@ -457,6 +568,35 @@ function Canvas({ tab, flow, onSelect }) {
         >
           ⇄ Reverse
         </button>
+        <button
+          data-testid="reset-label"
+          onClick={resetLabelOffsetOnSelected}
+          title="Snap label back to the middle of the edge"
+          className="text-xs font-semibold"
+          style={{
+            padding: '5px 10px', borderRadius: 8,
+            background: '#F5F1EA', color: '#0B1B2B',
+            border: '1px solid #E5E1D8',
+          }}
+        >
+          ↺ Center label
+        </button>
+        <Divider />
+        <ToolbarLabel>Color:</ToolbarLabel>
+        {Object.entries(EDGE_COLORS).map(([key, c]) => (
+          <button
+            key={key}
+            data-testid={`edge-color-${key}`}
+            onClick={() => setColorOnSelected(key)}
+            title={`Set selected edge color to ${key}`}
+            style={{
+              width: 22, height: 22, borderRadius: 999,
+              background: c.stroke, border: '2px solid #ffffff',
+              boxShadow: `0 0 0 1.5px ${c.stroke}, 0 1px 3px rgba(0,0,0,0.15)`,
+              cursor: 'pointer',
+            }}
+          />
+        ))}
         <Divider />
         <ToolbarLabel>Layout:</ToolbarLabel>
         <button
@@ -537,7 +677,7 @@ function Canvas({ tab, flow, onSelect }) {
         background: 'rgba(255,255,255,0.9)', padding: '5px 10px',
         borderRadius: 999, border: '1px solid #E5E1D8',
       }}>
-        Drag to move · Double-click a node/edge to rename · Drag from a red dot to connect · Select an edge → use toolbar to Toggle dashed / Reverse
+        Drag node to move · Drag corner handle to resize · Double-click to rename · Drag from red dot to connect · Drag edge label to reposition · Pick a color to change dashed style
       </div>
 
       <ReactFlow
@@ -550,6 +690,7 @@ function Canvas({ tab, flow, onSelect }) {
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeDoubleClick={onEdgeDoubleClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         proOptions={{ hideAttribution: true }}
