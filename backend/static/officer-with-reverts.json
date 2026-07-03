@@ -288,16 +288,16 @@
       "id": "n_1782992937610",
       "type": "box",
       "position": {
-        "x": 1329.2298561501864,
-        "y": 591.3456271044818
+        "x": 1600,
+        "y": 500
       },
       "data": {
         "label": "CITIZEN",
         "kind": "step",
         "id": "n_1782992937610"
       },
-      "width": 150,
-      "height": 49,
+      "width": 220,
+      "height": 120,
       "selected": false,
       "positionAbsolute": {
         "x": 1329.2298561501864,
