@@ -27,9 +27,8 @@ import {
   screenDetails,
   NODE_COLORS,
 } from '@/flowData';
-import { edarpanUiFlow, edarpanUiScreenDetails } from '@/edarpanUiFlow';
 
-const ALL_SCREEN_DETAILS = { ...screenDetails, ...edarpanUiScreenDetails };
+const ALL_SCREEN_DETAILS = { ...screenDetails };
 
 /* ---------------- Edge color palette ---------------- */
 const EDGE_COLORS = {
@@ -281,10 +280,9 @@ function toReactFlowEdges(rawEdges) {
 /* ---------------- App Constants ---------------- */
 
 const TABS = [
-  { id: 'workflow',   label: 'Complete Workflow', flow: workflowFlow },
-  { id: 'citizen',    label: 'Citizen Portal',    flow: citizenFlow },
-  { id: 'officer',    label: 'Officer Portal',    flow: officerFlow },
-  { id: 'edarpan-ui', label: 'Edarpan UI flow',   flow: edarpanUiFlow },
+  { id: 'workflow', label: 'Complete Workflow', flow: workflowFlow },
+  { id: 'citizen',  label: 'Citizen Portal',    flow: citizenFlow },
+  { id: 'officer',  label: 'Officer Portal',    flow: officerFlow },
 ];
 
 const LEGEND = [
