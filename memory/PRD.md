@@ -13,17 +13,20 @@ User asked to add the repo `https://github.com/kprasant635/edarpan-ui-flow.git` 
 - Data lives in `/app/frontend/src/flowData.js`
 - View logic in `/app/frontend/src/App.js`
 
-## What's been implemented — Jan 2026 (post-fix)
+## What's been implemented — Jan 2026 (post-fix, iteration 2)
 - Cloned & wired the `edarpan-ui-flow` repo into `/app`, added missing `reactflow` and `dagre` deps.
 - Three tabs: **Complete Workflow**, **Citizen Portal**, **Officer Portal** — each backed by data in `flowData.js`.
 - **Interactive diagram** with drag/resize/pan/zoom, minimap, controls.
-- **Editable**: double-click a node to rename, drag between red handle-dots to create edges, select + Delete to remove.
-- **Auto-Layout** (NEW): dagre-powered auto layout — `Auto ⇥` (left→right) and `Auto ⇩` (top→bottom). Fixes overlapping edges.
-- **Edge editing toolbar** (NEW):
-  - `⇢ Toggle dashed` — turns any selected edge into a red dashed "return" edge (or back).
+- **Editable nodes**: double-click to rename, drag between red handle-dots to create edges, select + Delete to remove.
+- **Auto-Layout**: dagre-powered — `Auto ⇥` (left→right) and `Auto ⇩` (top→bottom). Fixes overlapping edges.
+- **Node resizer (iter 2)**: every node has 8 corner/side handles when selected — drag to resize. Pill / Box / Diamond nodes all support it.
+- **Edge editing toolbar**:
+  - `⇢ Toggle dashed` — turns any selected edge into a dashed "return" edge (or back).
   - `⇄ Reverse` — flips direction of the selected edge.
-- **Dashed lines are now RED** and thicker (previously muted grey — hard to see). Return-arrow labels sit on a pink chip.
-- **Connection handles enlarged** and coloured red so users can visually spot where to drag from to make new edges.
+  - `↺ Center label` (iter 2) — snaps a dragged edge label back to its midpoint.
+  - **6-color palette** (iter 2): red, purple, blue, green, orange, gray — click any to color the selected edge (also makes it dashed).
+- **Draggable edge labels (iter 2)** — every edge label is a real DOM div you can click-and-drag to reposition. `data.labelOffset` persists in state.
+- **Dashed lines get color-matched pill labels** (red/purple/blue…) — was previously muted grey.
 - **Screen details side panel** — click any node with a linked `screen` key → shows role, purpose, key actions.
 - Legend + "how to edit" instructions + export/import JSON + reset per tab (localStorage-backed persistence).
 
