@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide the auto-injected Emergent badge */
+#emergent-badge,
+a[href*="emergent.sh"][id="emergent-badge"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 body {
     margin: 0;
     font-family:
