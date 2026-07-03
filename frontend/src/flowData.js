@@ -179,6 +179,12 @@ export const officerFlow = {
     { from: 'coDecision',to: 'skReview',   label: 'Return',     dashed: true, type: 'smoothstep' },
     { from: 'order',     to: 'end',        type: 'straight' },
     { from: 'reject',    to: 'end',        type: 'straight' },
+
+    // -------- Revert-back chain (red dashed) --------
+    { from: 'coDecision', to: 'lraDash',  label: 'CO Revert Back to LRA',         dashed: true, colorKey: 'red', type: 'smoothstep' },
+    { from: 'lraReport',  to: 'skDash',   label: 'LRA Revert Back to SK',         dashed: true, colorKey: 'red', type: 'smoothstep' },
+    { from: 'skCase',     to: 'asstDash', label: 'SK Revert Back to ASST',        dashed: true, colorKey: 'red', type: 'smoothstep' },
+    { from: 'coDecision', to: 'asstDash', label: 'CO Revert Back to ASST (Direct)', dashed: true, colorKey: 'red', type: 'smoothstep' },
   ],
 };
 
